@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Stadium · Digital tickets</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #f4f5f7; color: #1d2330; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 20px; }
+  h1 { margin: 0 0 4px; font-size: 26px; }
+  p.lead { margin: 0 0 24px; color: #5b6475; }
+  button { font: inherit; padding: 10px 18px; border: 0; border-radius: 8px; background: #1f5eff; color: #fff; cursor: pointer; }
+  button.secondary { background: #e3e7ef; color: #1d2330; }
+  .tickets { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 20px 0 32px; }
+  .ticket { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .ticket img { width: 100%; display: block; }
+  .ref { font-family: ui-monospace, monospace; font-weight: 600; }
+  .muted { color: #5b6475; font-size: 14px; }
+  textarea { width: 100%; box-sizing: border-box; font-family: ui-monospace, monospace; font-size: 13px; padding: 8px; border-radius: 8px; border: 1px solid #c8cedb; }
+  #result { margin-top: 12px; font-weight: 600; }
+  .ok { color: #137a3a; } .bad { color: #b42318; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Digital tickets</h1>
+  <p class="lead">Module 8: booking references, ticket generation and QR codes.</p>
+
+  <button id="issue">Issue demo tickets</button>
+  <div class="tickets" id="tickets"></div>
+
+  <h2>Gate check-in</h2>
+  <p class="muted">Click "Use this code" on a ticket (or paste a scanned code), then check in. A ticket admits once.</p>
+  <textarea id="code" rows="3" placeholder="SST1|..."></textarea>
+  <p><button id="checkin" class="secondary">Check in</button></p>
+  <div id="result"></div>
+</main>
+<script>
+  const ticketsEl = document.getElementById('tickets');
+  const codeEl = document.getElementById('code');
+  const resultEl = document.getElementById('result');
+
+  document.getElementById('issue').addEventListener('click', async () => {
+    const res = await fetch('/api/tickets/demo', { method: 'POST' });
+    const tickets = await res.json();
+    ticketsEl.innerHTML = '';
+    for (const t of tickets) {
+      const card = document.createElement('div');
+      card.className = 'ticket';
+      const img = document.createElement('img');
+      img.src = '/api/tickets/' + encodeURIComponent(t.ticketId) + '/qr';
+      img.alt = 'QR code for ' + t.seatLabel;
+      const ref = document.createElement('div');
+      ref.className = 'ref';
+      ref.textContent = t.bookingReference;
+      const seat = document.createElement('div');
+      seat.textContent = t.seatLabel + ' · ' + t.price;
+      const use = document.createElement('button');
+      use.className = 'secondary';
+      use.textContent = 'Use this code';
+      use.addEventListener('click', () => { codeEl.value = t.qrPayload; });
+      card.append(img, ref, seat, use);
+      ticketsEl.append(card);
+    }
+  });
+
+  document.getElementById('checkin').addEventListener('click', async () => {
+    const res = await fetch('/api/tickets/check-in', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: codeEl.value })
+    });
+    const body = await res.json();
+    resultEl.textContent = body.result.replace('_', ' ');
+    resultEl.className = body.admitted ? 'ok' : 'bad';
+  });
+</script>
+</body>
+</html>
