@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart Stadium | Admin Console</title>
+  <style>
+    :root{color-scheme:dark;--bg:#080d18;--panel:#111b2d;--line:#26354d;--muted:#9baac0;--accent:#76e0bd}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 0%,#1c3650 0,transparent 42%),var(--bg);color:#f4f7fb;font:15px Inter,system-ui,sans-serif}
+    main{max-width:1100px;margin:48px auto;padding:0 22px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px}
+    h1{font-size:30px;margin:0}p{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:28px}
+    section{background:linear-gradient(145deg,#152238,#0e1727);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 18px 50px #0003}
+    input,button{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);margin:7px 0;background:#0b1422;color:white}
+    button{background:var(--accent);color:#07130f;font-weight:700;border:0;cursor:pointer}button.secondary{background:#243650;color:white}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px}.stat{padding:16px;background:#101b2d;border:1px solid var(--line);border-radius:14px}
+    .stat b{font-size:25px;display:block}.small{font-size:12px;color:var(--muted)}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#c8d6e8}
+    @media(max-width:650px){.stats{grid-template-columns:repeat(2,1fr)}.top{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+<main>
+  <div class="top"><div><div class="small">SMART STADIUM / CONTROL CENTER</div><h1>Admin console</h1><p>Manage stadium inventory and match schedules.</p></div><button class="secondary" style="max-width:130px" onclick="logout()">Log out</button></div>
+  <section id="login">
+    <h2>Administrator sign in</h2>
+    <input id="email" type="email" placeholder="Admin email">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="login()">Sign in</button>
+    <p id="message" class="small"></p>
+  </section>
+  <div id="panel" hidden>
+    <div class="stats">
+      <div class="stat"><b id="accounts">—</b><span class="small">Accounts</span></div>
+      <div class="stat"><b id="stadiums">—</b><span class="small">Stadiums</span></div>
+      <div class="stat"><b id="matches">—</b><span class="small">Matches</span></div>
+      <div class="stat"><b id="seats">—</b><span class="small">Demo seats available</span></div>
+    </div>
+    <div class="grid">
+      <section><h2>Create stadium</h2><input id="stadiumName" placeholder="Stadium name"><input id="stadiumCity" placeholder="City"><button onclick="createStadium()">Create stadium</button></section>
+      <section><h2>Add stand</h2><input id="standStadiumId" placeholder="Stadium ID"><input id="standName" placeholder="Stand name"><button onclick="createStand()">Add stand</button></section>
+      <section><h2>Schedule match</h2><input id="home" placeholder="Home team"><input id="away" placeholder="Away team"><input id="kickoff" type="datetime-local"><input id="matchStadiumId" placeholder="Stadium ID"><button onclick="createMatch()">Create match</button></section>
+      <section><h2>Catalog</h2><button class="secondary" onclick="loadCatalog()">Refresh catalog</button><pre id="catalog">Sign in to view catalog.</pre></section>
+    </div>
+  </div>
+</main>
+<script>
+let token = "";
+async function api(path, options={}) {
+  const response = await fetch(path, {...options, headers:{"Content-Type":"application/json","Authorization":"Bearer "+token,...(options.headers||{})}});
+  const body = await response.json().catch(()=>({}));
+  if(!response.ok) throw new Error(body.message || "Request failed ("+response.status+")");
+  return body;
+}
+async function login(){
+  const message=document.getElementById("message"); message.textContent="Signing in…";
+  try {
+    const r=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:email.value,password:password.value})});
+    const data=await r.json(); if(!r.ok) throw new Error(data.message||"Login failed");
+    if(data.role!=="ADMIN") throw new Error("This account is not an administrator.");
+    token=data.token; document.getElementById("login").hidden=true; document.getElementById("panel").hidden=false; await refresh();
+  } catch(e){message.textContent=e.message;}
+}
+async function refresh(){const d=await api("/api/admin/dashboard");accounts.textContent=d.registeredAccounts;stadiums.textContent=d.stadiums;matches.textContent=d.matches;seats.textContent=d.demoAvailableSeats;await loadCatalog();}
+async function createStadium(){try{const d=await api("/api/admin/stadiums",{method:"POST",body:JSON.stringify({name:stadiumName.value,city:stadiumCity.value})});alert("Created stadium: "+d.id);await refresh();}catch(e){alert(e.message)}}
+async function createStand(){try{await api("/api/admin/stadiums/"+encodeURIComponent(standStadiumId.value)+"/stands",{method:"POST",body:JSON.stringify({name:standName.value})});alert("Stand added.");await refresh();}catch(e){alert(e.message)}}
+async function createMatch(){try{const d=await api("/api/admin/matches",{method:"POST",body:JSON.stringify({homeTeam:home.value,awayTeam:away.value,kickoff:kickoff.value,stadiumId:matchStadiumId.value})});alert("Match created: "+d.id);await refresh();}catch(e){alert(e.message)}}
+async function loadCatalog(){try{const [s,m]=await Promise.all([api("/api/admin/stadiums"),api("/api/admin/matches")]);catalog.textContent=JSON.stringify({stadiums:s,matches:m},null,2);}catch(e){catalog.textContent=e.message;}}
+function logout(){token="";document.getElementById("panel").hidden=true;document.getElementById("login").hidden=false;}
+</script>
+</body></html>

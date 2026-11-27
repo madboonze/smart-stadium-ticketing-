@@ -23,6 +23,18 @@ The Java backend owns domain rules, seat pricing, booking rules, validation and 
 - A small REST API exposing sample domain data
 - Unit tests for pricing and booking invariants
 
+**Module 4 — User accounts and roles** is implemented:
+- Customer and admin registration, login and logout
+- Password hashing and bearer-token sessions
+- Role checks (customer vs admin)
+- `GET /api/auth/me` for the current account
+
+**Module 9 — Admin console (API)** is implemented:
+- Protected admin APIs to create/list stadiums, add stands, and create/list matches
+- Admin dashboard summary endpoint
+- A small admin dashboard page at `/admin.html`
+
+Both modules use in-memory stores (accounts, tokens, stadiums, matches) so they can be integrated before the database module. Data resets on server restart; see Module 6.
 ## Requirements
 
 - JDK 21
@@ -82,17 +94,16 @@ smart-stadium/
 
 ## Planned modules
 
-1. Core domain foundation — current
+1. Core domain foundation — done
 2. Stadium structure and seat inventory
 3. Match management
-4. User accounts and roles
+4. User accounts and roles — done
 5. Booking workflow and temporary seat holds
 6. Database persistence
 7. Three.js stadium and seat-map experience
 8. Digital tickets and QR codes
-9. Admin console
+9. Admin console — done
 10. Integration, security, testing and project documentation
-
 ## Important
 
 This is a development starter, not a production ticketing platform. Payment processing, real authentication, persistent storage and concurrency-safe booking will be added in later modules. The demo API deliberately uses sample data.
