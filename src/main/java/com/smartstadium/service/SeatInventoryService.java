@@ -5,6 +5,8 @@ import com.smartstadium.domain.seat.SeatCategory;
 import com.smartstadium.domain.stadium.Section;
 import com.smartstadium.domain.stadium.Stadium;
 import com.smartstadium.domain.stadium.Stand;
+import com.smartstadium.persistence.InventoryStore;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -27,21 +29,51 @@ import java.util.UUID;
  * a seat id coming from the browser into the live domain object it must hold or book. It
  * is deliberately the narrowest possible seam between the two modules.</p>
  *
- * <p>Everything is in memory for now. The database module replaces the storage behind
- * these methods without changing their signatures.</p>
+ * <p>Module 6 made this durable. The live aggregate is still held in memory, because the
+ * rest of the application passes {@link Seat} objects around and expects to see one
+ * another's changes, but every change is written to the database as it happens and read
+ * back on the next start. The database is what survives; memory is the single live copy.</p>
+ *
+ * <p>That is also why seat status has its own methods here ({@link #holdSeat},
+ * {@link #confirmSeatBooking} and friends) rather than leaving callers to mutate a
+ * {@link Seat} directly. Calling {@code findSeat(...).hold()} changes memory only; calling
+ * {@code holdSeat(...)} changes memory and the database together. The booking engine
+ * should use these.</p>
  */
 @Service
 public class SeatInventoryService {
 
     private final AdminCatalogService catalog;
+    private final InventoryStore store;
+    private final boolean seedDemoBowl;
 
     public SeatInventoryService(
             AdminCatalogService catalog,
+            InventoryStore store,
             @Value("${smartstadium.inventory.seed-demo-bowl:true}") boolean seedDemoBowl) {
         this.catalog = catalog;
-        if (seedDemoBowl) {
+        this.store = store;
+        this.seedDemoBowl = seedDemoBowl;
+    }
+
+    /**
+     * Seeds the demo bowl, but only when no sectioned inventory exists yet.
+     *
+     * <p>{@link AdminCatalogService} has already restored anything saved by earlier runs
+     * by the time this runs, so the presence of a single section anywhere means the
+     * inventory came from the database and must not be seeded over.</p>
+     */
+    @PostConstruct
+    void seedIfEmpty() {
+        if (seedDemoBowl && !hasSectionedInventory()) {
             seedDemoBowl();
         }
+    }
+
+    private boolean hasSectionedInventory() {
+        return catalog.getStadiums().stream()
+                .flatMap(stadium -> stadium.getStands().stream())
+                .anyMatch(stand -> !stand.getSections().isEmpty());
     }
 
     // --- queries --------------------------------------------------------------------
@@ -142,7 +174,47 @@ public class SeatInventoryService {
         Section section = new Section(UUID.randomUUID().toString(), code, name, category, basePrice);
         section.generateRows(rowCount, seatsPerRow);
         stand.addSection(section);
+        store.persistSection(stand.getId(), section, stand.getSections().size() - 1);
         return section;
+    }
+
+    // --- seat status, memory and database together -----------------------------------
+
+    /**
+     * Holds a seat and saves the new status.
+     *
+     * @throws IllegalArgumentException if the seat does not exist in that stadium
+     * @throws IllegalStateException    if the seat is not available, from {@link Seat#hold()}
+     */
+    public synchronized Seat holdSeat(String stadiumId, String seatId) {
+        return changeSeat(stadiumId, seatId, Seat::hold);
+    }
+
+    /** Releases a held seat and saves the new status. */
+    public synchronized Seat releaseSeatHold(String stadiumId, String seatId) {
+        return changeSeat(stadiumId, seatId, Seat::releaseHold);
+    }
+
+    /** Turns a held seat into a booked one and saves the new status. */
+    public synchronized Seat confirmSeatBooking(String stadiumId, String seatId) {
+        return changeSeat(stadiumId, seatId, Seat::confirmBooking);
+    }
+
+    /** Frees a booked seat and saves the new status. */
+    public synchronized Seat cancelSeatBooking(String stadiumId, String seatId) {
+        return changeSeat(stadiumId, seatId, Seat::cancelBooking);
+    }
+
+    /**
+     * Applies a status transition and writes it. The domain object decides whether the
+     * transition is legal, so an invalid one throws before anything is saved.
+     */
+    private Seat changeSeat(String stadiumId, String seatId, java.util.function.Consumer<Seat> change) {
+        Seat seat = findSeat(stadiumId, seatId)
+                .orElseThrow(() -> new IllegalArgumentException("Seat not found: " + seatId));
+        change.accept(seat);
+        store.updateSeatStatus(seat);
+        return seat;
     }
 
     private void requireSectionCodeFreeInStadium(Stadium stadium, String code) {

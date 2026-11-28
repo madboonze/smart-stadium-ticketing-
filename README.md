@@ -32,6 +32,18 @@ The Java backend owns domain rules, seat pricing, booking rules, validation and 
 - Public read APIs for the seat map, plus an admin API to create sections
 - A seeded demo stadium with 4 stands, 12 sections and 1,978 seats
 
+**Module 6 — Database persistence** is implemented for the seat inventory:
+- SQLite via Spring Data JPA, with Flyway owning the schema
+- Stadiums, stands, sections, rows, seats (including seat status) and matches survive restart
+- The domain classes are untouched: a separate `persistence` layer holds the entities, with
+  a mapper converting both ways
+- Real foreign keys plus a CHECK constraint that a seat has exactly one parent
+- `SeatInventoryService.holdSeat/releaseSeatHold/confirmSeatBooking/cancelSeatBooking`
+  change memory and the database together
+
+Accounts, tokens, tickets and check-ins are still in memory and reset on restart; those
+conversions are planned as separate changes so each module's author reviews their own.
+
 **Module 4 — User accounts and roles** is implemented:
 - Customer and admin registration, login and logout
 - Password hashing and bearer-token sessions
@@ -84,7 +96,22 @@ Seat inventory endpoints (Module 2):
 | POST | `/api/admin/inventory/stadiums/{stadiumId}/stands/{standId}/sections` | Create a section and generate its seats (admin) |
 
 The seeded demo stadium can be switched off with
-`smartstadium.inventory.seed-demo-bowl=false`.
+`smartstadium.inventory.seed-demo-bowl=false`. It is only ever seeded when the database
+holds no sectioned inventory, so it is not recreated on later starts.
+
+## Database
+
+The SQLite file lives at `data/smart-stadium.db`, which `.gitignore` excludes. Flyway
+creates the schema on first start from `src/main/resources/db/migration`.
+
+To start from scratch, stop the app and delete the file:
+
+```bash
+rm -f data/smart-stadium.db        # Windows: del data\smart-stadium.db
+```
+
+The seed inventory is rebuilt on the next start. Point somewhere else with
+`SMART_STADIUM_DB=/path/to/other.db`.
 
 Run tests:
 
@@ -124,7 +151,7 @@ smart-stadium/
 3. Match management
 4. User accounts and roles — done
 5. Booking workflow and temporary seat holds
-6. Database persistence
+6. Database persistence — done for seat inventory; accounts and tickets pending
 7. Three.js stadium and seat-map experience
 8. Digital tickets and QR codes
 9. Admin console — done
