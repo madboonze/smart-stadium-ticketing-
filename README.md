@@ -23,6 +23,15 @@ The Java backend owns domain rules, seat pricing, booking rules, validation and 
 - A small REST API exposing sample domain data
 - Unit tests for pricing and booking invariants
 
+**Module 2 — Stadium structure and seat inventory** is implemented:
+- Full seating hierarchy: `Stadium` → `Stand` → `Section` → `SeatRow` → `Seat`
+- `Section` carries the seat category and base price; `SeatFactory` builds the matching seat type
+- `Section.generateRows(rows, seatsPerRow)` generates individually bookable seats in one call
+- Readable stadium-wide seat labels such as `N1-A-07`
+- `SeatInventoryService` for inventory management and seat lookup
+- Public read APIs for the seat map, plus an admin API to create sections
+- A seeded demo stadium with 4 stands, 12 sections and 1,978 seats
+
 **Module 4 — User accounts and roles** is implemented:
 - Customer and admin registration, login and logout
 - Password hashing and bearer-token sessions
@@ -60,6 +69,22 @@ mvn spring-boot:run
 Then open:
 - `http://localhost:8080/api/health`
 - `http://localhost:8080/api/demo/stadium`
+- `http://localhost:8080/api/stadiums` — stadiums with capacity and availability
+- `http://localhost:8080/api/stadiums/{stadiumId}/inventory` — stands and sections
+- `http://localhost:8080/api/stadiums/{stadiumId}/inventory?includeSeats=true` — every row and seat
+
+Seat inventory endpoints (Module 2):
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/stadiums` | Stadiums that can be browsed |
+| GET | `/api/stadiums/{stadiumId}/inventory` | Stands and sections with counts |
+| GET | `/api/stadiums/{stadiumId}/stands/{standId}/sections/{sectionId}` | One section with all rows and seats |
+| GET | `/api/stadiums/{stadiumId}/seats/{seatId}` | A single seat |
+| POST | `/api/admin/inventory/stadiums/{stadiumId}/stands/{standId}/sections` | Create a section and generate its seats (admin) |
+
+The seeded demo stadium can be switched off with
+`smartstadium.inventory.seed-demo-bowl=false`.
 
 Run tests:
 
@@ -95,7 +120,7 @@ smart-stadium/
 ## Planned modules
 
 1. Core domain foundation — done
-2. Stadium structure and seat inventory
+2. Stadium structure and seat inventory — done
 3. Match management
 4. User accounts and roles — done
 5. Booking workflow and temporary seat holds
