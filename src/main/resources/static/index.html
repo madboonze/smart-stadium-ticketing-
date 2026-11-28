@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07110f">
+  <title>Smart Stadium — Choose your seats</title>
+  <link rel="stylesheet" href="/stadium.css">
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js"}}
+  </script>
+  <script type="module" src="/stadium.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Smart Stadium home">
+      <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+      <span>SMART<span class="brand-light">STADIUM</span></span>
+    </a>
+    <nav class="main-nav" aria-label="Main navigation">
+      <a class="active" href="/">Matches</a>
+      <a href="/tickets.html">My tickets</a>
+      <a href="/admin.html">Admin</a>
+    </nav>
+    <div class="user-chip"><span class="online-dot"></span><span>Guest experience</span></div>
+  </header>
+
+  <main class="page-wrap">
+    <div class="breadcrumb"><span>Matches</span><span class="crumb-slash">/</span><strong>Seat selection</strong></div>
+
+    <section class="event-card" aria-labelledby="match-title">
+      <div class="event-copy">
+        <div class="eyebrow"><span class="live-dot"></span><span id="match-status">LOADING MATCH</span><span class="eyebrow-divider"></span><span id="stadium-city">DUBAI</span></div>
+        <h1 id="match-title">Choose your view.</h1>
+        <p class="event-subtitle" id="match-subtitle">Your seat, your night, your stadium.</p>
+        <div class="matchup">
+          <div class="team"><span class="team-crest crest-home">DF</span><span id="home-team">Dubai Falcons</span></div>
+          <span class="versus">VS</span>
+          <div class="team"><span class="team-crest crest-away">AU</span><span id="away-team">Abu Dhabi United</span></div>
+        </div>
+      </div>
+      <div class="event-meta">
+        <div class="meta-icon" aria-hidden="true">◷</div>
+        <div><span class="meta-label">KICK OFF</span><strong id="kickoff">Loading date…</strong></div>
+        <span class="meta-divider"></span>
+        <div class="meta-icon pin-icon" aria-hidden="true">⌖</div>
+        <div><span class="meta-label">VENUE</span><strong id="stadium-name">Grand Arena</strong></div>
+      </div>
+    </section>
+
+    <div class="section-heading">
+      <div><span class="section-kicker">THE ARENA</span><h2>Pick your seats</h2></div>
+      <div class="availability"><span class="online-dot"></span><span id="available-count">Loading availability</span><button id="refresh-button" class="icon-button" type="button" title="Refresh seat availability" aria-label="Refresh seat availability">↻</button></div>
+    </div>
+
+    <section class="booking-layout" aria-label="Stadium seat selection">
+      <div class="stadium-panel">
+        <div class="map-toolbar">
+          <div class="map-title"><span class="view-icon">◉</span><span>3D STADIUM VIEW</span><span class="map-live"><i></i> LIVE MAP</span></div>
+          <button id="reset-view" type="button" class="reset-button">Reset view <span aria-hidden="true">↗</span></button>
+        </div>
+        <div id="scene-wrap" class="scene-wrap" aria-label="Interactive three-dimensional stadium. Drag to rotate and use the mouse wheel to zoom.">
+          <canvas id="stadium-canvas" aria-label="3D stadium seat map"></canvas>
+          <div class="scene-vignette" aria-hidden="true"></div>
+          <div class="scene-tag tag-north"><span class="tag-dash"></span> NORTH STAND</div>
+          <div class="scene-tag tag-south"><span class="tag-dash"></span> SOUTH STAND</div>
+          <div class="scene-instruction"><span class="mouse-glyph">⌖</span> DRAG TO EXPLORE <span class="instruction-dot"></span> SCROLL TO ZOOM</div>
+          <div id="scene-message" class="scene-message" role="status">Connecting to the stadium…</div>
+        </div>
+        <div class="map-footer">
+          <div class="legend" aria-label="Seat status legend">
+            <span><i class="legend-dot available"></i>Available</span>
+            <span><i class="legend-dot selected"></i>Selected</span>
+            <span><i class="legend-dot booked"></i>Booked</span>
+            <span><i class="legend-dot held"></i>On hold</span>
+          </div>
+          <span class="map-scale">INTERACTIVE SEAT MAP <b>·</b> DEMO ARENA</span>
+        </div>
+      </div>
+
+      <aside class="selection-panel" aria-labelledby="selection-heading">
+        <div class="panel-topline"><span>YOUR SELECTION</span><span id="selection-count" class="count-pill">0</span></div>
+        <h2 id="selection-heading">Make it yours.</h2>
+        <p class="panel-intro">Tap a glowing seat to add it to your evening.</p>
+        <div id="seat-list" class="seat-list" aria-live="polite">
+          <div class="empty-state"><span class="empty-orbit">◉</span><strong>Finding your seats</strong><span>Loading the live stadium layout…</span></div>
+        </div>
+        <div class="selection-total">
+          <div class="total-label"><span>ESTIMATED TOTAL</span><span class="currency-note">AED</span></div>
+          <div class="total-value" id="total-price">AED 0</div>
+          <span class="fee-note">Final pricing shown before checkout</span>
+        </div>
+        <button id="continue-button" class="continue-button" type="button">Continue <span aria-hidden="true">→</span></button>
+        <div class="preview-note"><span class="lock-icon" aria-hidden="true">◈</span><span>Seat selection is a preview. Booking and seat holds will be enabled in the booking module.</span></div>
+        <div class="seat-help"><span class="help-icon">i</span><span>Choose an available seat on the map or from the list.</span></div>
+      </aside>
+    </section>
+
+    <footer class="page-footer"><span>SMARTSTADIUM <b>·</b> A BETTER WAY TO BE THERE</span><span>Secure seat selection <i class="footer-spark">✦</i></span></footer>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
